@@ -85,7 +85,19 @@
 
 /* Safe area bottom padding for iPhone/Android home bar */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0.75rem);
+  padding-bottom: max(env(safe-area-inset-bottom, 0.75rem), 0.75rem);
+}
+
+/* Android Native Touch & Scroll Optimization */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+body {
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Print Styles */

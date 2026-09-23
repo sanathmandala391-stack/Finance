@@ -17,6 +17,8 @@ import { computeCustomerFinancialProfile } from './utils/financeCalculations';
 import { cloudSync } from './services/cloudSyncService';
 import { firebaseSync } from './services/firebaseSyncService';
 
+import { InstallAppBanner } from './components/common/InstallAppBanner';
+
 export const App: React.FC = () => {
   const {
     customers,
@@ -139,6 +141,9 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         onOpenOwnerLogin={() => setIsOwnerLoginOpen(true)}
       />
+
+      {/* 1-Tap Mobile Android Install Banner */}
+      <InstallAppBanner />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">

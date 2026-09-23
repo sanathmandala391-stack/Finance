@@ -165,12 +165,12 @@ export const ScheduleGridView: React.FC<ScheduleGridViewProps> = ({
 
       {/* MATRIX GRID VIEW */}
       {viewMode === 'grid' && (
-        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-10 gap-1.5 sm:gap-2">
           {filteredSchedule.map((item) => (
             <div
               key={item.dayNumber}
               onClick={() => onSelectDay(item)}
-              className={`p-2.5 rounded-xl border transition-all duration-150 cursor-pointer active:scale-95 shadow-sm hover:shadow-md flex flex-col justify-between min-h-[90px] relative ${getStatusBorder(
+              className={`p-2 sm:p-2.5 rounded-xl border transition-all duration-150 cursor-pointer active:scale-95 shadow-sm hover:shadow-md flex flex-col justify-between min-h-[78px] sm:min-h-[85px] relative ${getStatusBorder(
                 item.status,
                 item.isToday
               )}`}
