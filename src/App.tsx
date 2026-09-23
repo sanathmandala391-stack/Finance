@@ -15,6 +15,7 @@ import { SettingsView } from './components/settings/SettingsView';
 import { OwnerLoginModal } from './components/auth/OwnerLoginModal';
 import { computeCustomerFinancialProfile } from './utils/financeCalculations';
 import { cloudSync } from './services/cloudSyncService';
+import { firebaseSync } from './services/firebaseSyncService';
 
 export const App: React.FC = () => {
   const {
@@ -51,6 +52,9 @@ export const App: React.FC = () => {
             });
             if (res.data.owner) {
               cloudSync.saveOwnerProfile(res.data.owner);
+            }
+            if (res.data.firebaseUrl) {
+              firebaseSync.setDatabaseUrl(res.data.firebaseUrl);
             }
             alert(`✨ Data successfully synchronized!\n\nImported ${res.data.customers.length} customers and ${res.data.payments.length} transactions from ${res.data.sourceDevice}.`);
             window.history.replaceState(null, '', window.location.pathname);

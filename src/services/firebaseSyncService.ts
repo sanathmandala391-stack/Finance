@@ -42,7 +42,10 @@ export class FirebaseSyncService {
   }
 
   public setDatabaseUrl(url: string): void {
-    const cleanUrl = url.trim().replace(/\/+$/, '');
+    let cleanUrl = url.trim().replace(/\/+$/, '');
+    if (cleanUrl && !cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = `https://${cleanUrl}`;
+    }
     this.databaseUrl = cleanUrl;
     try {
       localStorage.setItem(LOCAL_STORAGE_FIREBASE_URL_KEY, cleanUrl);
@@ -82,20 +85,28 @@ export class FirebaseSyncService {
    * Test connection to a Firebase Realtime Database URL
    */
   public async testFirebaseConnection(customUrl?: string): Promise<{ success: boolean; message: string }> {
-    const url = (customUrl || this.databaseUrl).replace(/\/+$/, '');
+    let url = (customUrl || this.databaseUrl).trim().replace(/\/+$/, '');
+    if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `https://${url}`;
+    }
     try {
       const res = await fetch(`${url}/.json?shallow=true`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
       });
 
-      if (res.ok || res.status === 401 || res.status === 403) {
-        // Even if 401/403 or 200, the database URL is valid and active
-        return { success: true, message: 'Firebase Realtime Database connection successful!' };
+      if (res.status === 200) {
+        return { success: true, message: 'Connected! Read/Write active on Firebase.' };
       }
-      return { success: false, message: `Firebase returned status code: ${res.status}` };
+      if (res.status === 401 || res.status === 403) {
+        return { success: true, message: 'Database reachable! (Note: set Rules to ".read": true, ".write": true for open sync).' };
+      }
+      if (res.status === 404) {
+        return { success: false, message: '404 Not Found: Database does not exist yet. Please create it in Firebase Console.' };
+      }
+      return { success: false, message: `Firebase returned HTTP status: ${res.status}` };
     } catch (err: any) {
-      return { success: false, message: err.message || 'Could not connect to Firebase URL.' };
+      return { success: false, message: err.message || 'Could not connect to Firebase URL. Please check the URL format.' };
     }
   }
 

@@ -306,16 +306,57 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* 2. FIREBASE REALTIME DATABASE */}
       <div className="rounded-3xl bg-dark-900 border border-amber-500/30 p-5 sm:p-6 shadow-xl space-y-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
               <Flame className="w-5 h-5 text-amber-400" />
               <span>Firebase Realtime Database Cloud Sync</span>
             </div>
             <p className="text-xs text-slate-400">
-              Live bi-directional synchronization with Google Firebase Realtime Database across all phones and laptops.
+              Bi-directional live cloud synchronization powered by Google Firebase Realtime Database.
             </p>
           </div>
+          <a
+            href="https://console.firebase.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold transition-all inline-flex items-center gap-1 w-fit"
+          >
+            <span>Open Firebase Console</span>
+            <span>↗</span>
+          </a>
+        </div>
+
+        {/* 3-Step Guide */}
+        <div className="p-3.5 rounded-2xl bg-dark-850/80 border border-dark-750 text-xs text-slate-300 space-y-2">
+          <p className="font-bold text-amber-300 text-[11px] uppercase tracking-wider">
+            Quick 1-Minute Free Setup:
+          </p>
+          <ol className="list-decimal list-inside space-y-1 text-slate-400 text-[11px] leading-relaxed">
+            <li>
+              Go to{' '}
+              <a
+                href="https://console.firebase.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-amber-400 underline font-medium"
+              >
+                console.firebase.google.com
+              </a>{' '}
+              and click <strong className="text-white">Add Project</strong>.
+            </li>
+            <li>
+              Go to <strong className="text-white">Build &gt; Realtime Database</strong> &gt; Click{' '}
+              <strong className="text-white">Create Database</strong>.
+            </li>
+            <li>
+              In the <strong className="text-white">Rules</strong> tab, set{' '}
+              <code className="px-1.5 py-0.5 rounded bg-black/50 text-emerald-300 font-mono text-[10px]">
+                {'{ ".read": true, ".write": true }'}
+              </code>
+              , then copy and paste your database URL below:
+            </li>
+          </ol>
         </div>
 
         <div className="space-y-2">
@@ -327,7 +368,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               type="text"
               value={firebaseUrl}
               onChange={(e) => setFirebaseUrl(e.target.value)}
-              placeholder="https://<your-project>-default-rtdb.firebaseio.com"
+              placeholder="https://your-project-id-default-rtdb.firebaseio.com"
               className="flex-1 px-3.5 py-2.5 rounded-xl border border-gold-500/30 bg-dark-850 text-white text-xs font-mono outline-none focus:border-gold-400 transition-all"
             />
             <button
@@ -350,6 +391,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span>{fbMessage.text}</span>
             </p>
           )}
+          <p className="text-[11px] text-slate-500 italic">
+            💡 Tip: When you scan the <strong>Sync to Mobile (QR)</strong> from this laptop, your Firebase configuration will automatically transfer to your phone!
+          </p>
         </div>
       </div>
 

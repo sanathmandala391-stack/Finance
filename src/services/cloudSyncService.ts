@@ -11,6 +11,7 @@ export interface SyncPayload {
   sourceDevice: string;
   customers: Customer[];
   payments: PaymentRecord[];
+  firebaseUrl?: string;
 }
 
 export class CloudSyncService {
@@ -290,6 +291,7 @@ export class CloudSyncService {
       sourceDevice: this.getDeviceId(),
       customers,
       payments,
+      firebaseUrl: firebaseSync.getStoredDatabaseUrl(),
     };
 
     const json = JSON.stringify(data);
