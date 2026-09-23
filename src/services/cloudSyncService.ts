@@ -153,35 +153,86 @@ export class CloudSyncService {
 
   /**
    * Initialize WebRTC Peer-to-Peer Mesh for the Owner across Laptop & Mobile
+   * Auto-connects devices of the same mobile number across deterministic peer slots
    */
   public initPeerNetwork(owner: OwnerProfile): void {
     if (typeof window === 'undefined' || !navigator.onLine) return;
     if (this.peerInitialized && this.peer && !this.peer.destroyed) return;
 
     const cleanMobile = owner.mobile.replace(/\D/g, '').slice(-10);
-    const shortDevice = Math.random().toString(36).substring(2, 7);
-    const myPeerId = `girigiri-sync-${cleanMobile}-${shortDevice}`;
+    const slots = [0, 1, 2, 3];
 
-    try {
-      this.peer = new Peer(myPeerId, {
-        debug: 0,
-      });
+    const tryInitSlot = (slotIndex: number) => {
+      if (slotIndex >= slots.length) {
+        // Fallback to random ID
+        const randomId = `girigiri-sync-${cleanMobile}-${Math.random().toString(36).substring(2, 6)}`;
+        this.createPeerInstance(randomId, cleanMobile, slots);
+        return;
+      }
 
-      this.peer.on('open', () => {
+      const myPeerId = `girigiri-sync-${cleanMobile}-${slots[slotIndex]}`;
+      const p = new Peer(myPeerId, { debug: 0 });
+
+      p.on('open', () => {
+        this.peer = p;
         this.peerInitialized = true;
         this.notifyListeners('SYNCED', new Date().toISOString());
+
+        // Connect to all other slots of this owner
+        slots.forEach((otherSlot) => {
+          if (otherSlot !== slots[slotIndex]) {
+            const targetPeerId = `girigiri-sync-${cleanMobile}-${otherSlot}`;
+            try {
+              const conn = p.connect(targetPeerId, { reliable: true });
+              this.setupConnectionHandlers(conn);
+            } catch {
+              // Ignore
+            }
+          }
+        });
       });
 
-      // Handle incoming connection from owner's other device (e.g. mobile connecting to laptop)
-      this.peer.on('connection', (conn) => {
+      p.on('connection', (conn) => {
         this.setupConnectionHandlers(conn);
       });
 
-      this.peer.on('error', () => {
-        // Reconnect gracefully if needed
+      p.on('error', (err: any) => {
+        if (err?.type === 'unavailable-id') {
+          // This slot is occupied by owner's other device (e.g. laptop), try next slot
+          p.destroy();
+          tryInitSlot(slotIndex + 1);
+        }
+      });
+    };
+
+    tryInitSlot(0);
+  }
+
+  private createPeerInstance(myPeerId: string, cleanMobile: string, slots: number[]) {
+    try {
+      const p = new Peer(myPeerId, { debug: 0 });
+      p.on('open', () => {
+        this.peer = p;
+        this.peerInitialized = true;
+        this.notifyListeners('SYNCED', new Date().toISOString());
+
+        // Connect to slots 0, 1, 2
+        slots.forEach((s) => {
+          const target = `girigiri-sync-${cleanMobile}-${s}`;
+          try {
+            const conn = p.connect(target, { reliable: true });
+            this.setupConnectionHandlers(conn);
+          } catch {
+            // Ignore
+          }
+        });
+      });
+
+      p.on('connection', (conn) => {
+        this.setupConnectionHandlers(conn);
       });
     } catch {
-      // WebRTC fallback
+      // Ignore
     }
   }
 
@@ -190,7 +241,7 @@ export class CloudSyncService {
       this.activeConnections.set(conn.peer, conn);
       this.notifyListeners('SYNCED', new Date().toISOString());
 
-      // Send our current local data to newly connected device
+      // Send current data to the other device immediately
       const owner = this.getOwnerProfile();
       if (owner) {
         try {
@@ -204,6 +255,7 @@ export class CloudSyncService {
               sourceDevice: this.getDeviceId(),
               customers: custs,
               payments: pays,
+              firebaseUrl: firebaseSync.getStoredDatabaseUrl(),
             },
           });
         } catch {
