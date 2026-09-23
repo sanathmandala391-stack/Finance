@@ -18,9 +18,11 @@ import {
   Volume2,
   Play,
   QrCode,
+  Flame,
 } from 'lucide-react';
 import { exportBackupToJSON, parseBackupFile } from '../../utils/storage';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
+import { firebaseSync } from '../../services/firebaseSyncService';
 
 interface SettingsViewProps {
   customers: Customer[];
@@ -51,6 +53,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPlayingSound, setIsPlayingSound] = useState(false);
+  const [firebaseUrl, setFirebaseUrl] = useState(() => firebaseSync.getStoredDatabaseUrl());
+  const [isTestingFb, setIsTestingFb] = useState(false);
+  const [fbMessage, setFbMessage] = useState<{ success: boolean; text: string } | null>(null);
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -65,6 +70,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleSaveAndTestFirebase = async () => {
+    setIsTestingFb(true);
+    setFbMessage(null);
+    firebaseSync.setDatabaseUrl(firebaseUrl);
+
+    try {
+      const res = await firebaseSync.testFirebaseConnection(firebaseUrl);
+      if (res.success) {
+        setFbMessage({ success: true, text: 'Connected to Firebase Realtime DB!' });
+        if (owner) {
+          await firebaseSync.pushToFirebase(owner, customers, payments);
+          firebaseSync.startRealtimeStream(owner.mobile);
+        }
+        showNotification('success', 'Firebase Database configured & live synchronized!');
+      } else {
+        setFbMessage({ success: false, text: res.message });
+      }
+    } catch {
+      setFbMessage({ success: false, text: 'Connection failed.' });
+    } finally {
+      setIsTestingFb(false);
+    }
   };
 
   const handleManualSync = async () => {
@@ -275,7 +304,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* 2. LANGUAGE PREFERENCE */}
+      {/* 2. FIREBASE REALTIME DATABASE */}
+      <div className="rounded-3xl bg-dark-900 border border-amber-500/30 p-5 sm:p-6 shadow-xl space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
+              <Flame className="w-5 h-5 text-amber-400" />
+              <span>Firebase Realtime Database Cloud Sync</span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Live bi-directional synchronization with Google Firebase Realtime Database across all phones and laptops.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-xs font-bold text-gold-300">
+            Firebase Realtime Database URL:
+          </label>
+          <div className="flex flex-col sm:flex-row items-stretch gap-2">
+            <input
+              type="text"
+              value={firebaseUrl}
+              onChange={(e) => setFirebaseUrl(e.target.value)}
+              placeholder="https://<your-project>-default-rtdb.firebaseio.com"
+              className="flex-1 px-3.5 py-2.5 rounded-xl border border-gold-500/30 bg-dark-850 text-white text-xs font-mono outline-none focus:border-gold-400 transition-all"
+            />
+            <button
+              type="button"
+              onClick={handleSaveAndTestFirebase}
+              disabled={isTestingFb}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-dark-950 font-black text-xs shadow-glow-gold hover:from-amber-600 transition-all active:scale-95 flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isTestingFb ? 'animate-spin' : ''}`} />
+              <span>{isTestingFb ? 'Connecting...' : 'Save & Sync Firebase'}</span>
+            </button>
+          </div>
+          {fbMessage && (
+            <p
+              className={`text-xs font-bold flex items-center gap-1.5 ${
+                fbMessage.success ? 'text-emerald-400' : 'text-rose-400'
+              }`}
+            >
+              <span>{fbMessage.success ? '✓' : '⚠️'}</span>
+              <span>{fbMessage.text}</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* 3. LANGUAGE PREFERENCE */}
       <div className="rounded-3xl bg-dark-900 border border-gold-500/20 p-5 sm:p-6 shadow-xl space-y-3">
         <div className="flex items-center gap-2 text-gold-400 font-extrabold text-sm">
           <Globe className="w-4 h-4" />

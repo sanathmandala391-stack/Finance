@@ -1,5 +1,6 @@
 import { Customer, PaymentRecord, OwnerProfile, CloudSyncStatus } from '../types/finance';
 import Peer, { DataConnection } from 'peerjs';
+import { firebaseSync } from './firebaseSyncService';
 
 const LOCAL_STORAGE_OWNER_KEY = 'giri_giri_owner_profile_v2';
 const LOCAL_STORAGE_SYNC_META_KEY = 'giri_giri_sync_meta_v2';
@@ -41,17 +42,27 @@ export class CloudSyncService {
       // Fallback
     }
 
+    // Subscribe to Firebase real-time incoming changes
+    firebaseSync.subscribeToData((data) => {
+      this.notifyDataListeners(data);
+      const now = new Date().toISOString();
+      this.lastSyncedAt = now;
+      this.notifyListeners('SYNCED', now);
+    });
+
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
         this.notifyListeners('SYNCED', this.lastSyncedAt);
         if (this.currentOwner) {
           this.initPeerNetwork(this.currentOwner);
+          firebaseSync.startRealtimeStream(this.currentOwner.mobile);
         }
       });
       window.addEventListener('offline', () => this.notifyListeners('OFFLINE', this.lastSyncedAt));
 
       if (this.currentOwner) {
         this.initPeerNetwork(this.currentOwner);
+        firebaseSync.startRealtimeStream(this.currentOwner.mobile);
       }
     }
   }
@@ -111,6 +122,7 @@ export class CloudSyncService {
     this.currentOwner = profile;
     localStorage.setItem(LOCAL_STORAGE_OWNER_KEY, JSON.stringify(profile));
     this.initPeerNetwork(profile);
+    firebaseSync.startRealtimeStream(profile.mobile);
   }
 
   public getOwnerProfile(): OwnerProfile | null {
@@ -125,6 +137,7 @@ export class CloudSyncService {
   public logoutOwner(): void {
     this.currentOwner = null;
     localStorage.removeItem(LOCAL_STORAGE_OWNER_KEY);
+    firebaseSync.stopRealtimeStream();
     if (this.peer) {
       try {
         this.peer.destroy();
@@ -254,6 +267,9 @@ export class CloudSyncService {
       }
     });
 
+    // 3. Firebase Realtime Database Cloud Sync
+    firebaseSync.pushToFirebase(owner, customers, payments);
+
     const nowISO = new Date().toISOString();
     this.lastSyncedAt = nowISO;
     localStorage.setItem(LOCAL_STORAGE_SYNC_META_KEY, nowISO);
@@ -357,7 +373,7 @@ export class CloudSyncService {
   }
 
   /**
-   * Auth/Login helper
+   * Auth/Login helper with Firebase & WebRTC sync
    */
   public async loginOwnerLocallyOrSync(
     mobile: string,
@@ -380,6 +396,17 @@ export class CloudSyncService {
         return { success: false, error: 'Incorrect PIN for this account.' };
       }
       this.saveOwnerProfile(savedOwner);
+      
+      // Pull latest from Firebase
+      try {
+        const fbRes = await firebaseSync.pullFromFirebase(cleanMobile);
+        if (fbRes.success && fbRes.data && (fbRes.data.customers.length > 0 || fbRes.data.payments.length > 0)) {
+          this.notifyDataListeners(fbRes.data);
+        }
+      } catch {
+        // Ignore
+      }
+
       return { success: true, owner: savedOwner };
     }
 
@@ -396,9 +423,21 @@ export class CloudSyncService {
     };
 
     this.saveOwnerProfile(ownerProfile);
+
+    // Pull from Firebase
+    try {
+      const fbRes = await firebaseSync.pullFromFirebase(cleanMobile);
+      if (fbRes.success && fbRes.data && (fbRes.data.customers.length > 0 || fbRes.data.payments.length > 0)) {
+        this.notifyDataListeners(fbRes.data);
+      }
+    } catch {
+      // Ignore
+    }
+
     this.notifyListeners('SYNCED', new Date().toISOString());
     return { success: true, owner: ownerProfile };
   }
 }
 
 export const cloudSync = CloudSyncService.getInstance();
+
