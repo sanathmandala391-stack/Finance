@@ -16,13 +16,17 @@ export function useFinanceData() {
   const { owner } = useAuth();
 
 
-  // Start with local storage
+  // Start with local storage or real initial record
   const [customers, setCustomers] = useState<Customer[]>(() => {
-    return loadCustomersFromStorage();
+    const stored = loadCustomersFromStorage();
+    if (stored.length > 0) return stored;
+    return generateRealisticDemoData().customers;
   });
 
   const [payments, setPayments] = useState<PaymentRecord[]>(() => {
-    return loadPaymentsFromStorage();
+    const stored = loadPaymentsFromStorage();
+    if (stored.length > 0) return stored;
+    return generateRealisticDemoData().payments;
   });
 
   const [todayDate, setTodayDate] = useState<string>(getTodayISO());

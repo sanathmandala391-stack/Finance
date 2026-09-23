@@ -17,12 +17,10 @@ import {
   Check,
   Volume2,
   Play,
-  QrCode,
   Flame,
 } from 'lucide-react';
 import { exportBackupToJSON, parseBackupFile } from '../../utils/storage';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
-import { firebaseSync } from '../../services/firebaseSyncService';
 
 interface SettingsViewProps {
   customers: Customer[];
@@ -46,16 +44,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const {
     owner,
     isLoggedIn,
-    syncStatus,
     lastSyncedAt,
     activeDeviceId,
   } = useAuth();
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPlayingSound, setIsPlayingSound] = useState(false);
-  const [firebaseUrl, setFirebaseUrl] = useState(() => firebaseSync.getStoredDatabaseUrl());
-  const [isTestingFb, setIsTestingFb] = useState(false);
-  const [fbMessage, setFbMessage] = useState<{ success: boolean; text: string } | null>(null);
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -72,30 +66,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setTimeout(() => setNotification(null), 4000);
   };
 
-  const handleSaveAndTestFirebase = async () => {
-    setIsTestingFb(true);
-    setFbMessage(null);
-    firebaseSync.setDatabaseUrl(firebaseUrl);
-
-    try {
-      const res = await firebaseSync.testFirebaseConnection(firebaseUrl);
-      if (res.success) {
-        setFbMessage({ success: true, text: 'Connected to Firebase Realtime DB!' });
-        if (owner) {
-          await firebaseSync.pushToFirebase(owner, customers, payments);
-          firebaseSync.startRealtimeStream(owner.mobile);
-        }
-        showNotification('success', 'Firebase Database configured & live synchronized!');
-      } else {
-        setFbMessage({ success: false, text: res.message });
-      }
-    } catch {
-      setFbMessage({ success: false, text: 'Connection failed.' });
-    } finally {
-      setIsTestingFb(false);
-    }
-  };
-
   const handleManualSync = async () => {
     if (!isLoggedIn) {
       onOpenOwnerLogin();
@@ -105,7 +75,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     try {
       const res = await onSyncNow();
       if (res.success) {
-        showNotification('success', 'All customer & collection data successfully synced with the Cloud!');
+        showNotification('success', 'All customer & collection data successfully synced with Firebase!');
       } else {
         showNotification('error', res.error || 'Failed to sync with cloud.');
       }
@@ -163,10 +133,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Page Header */}
       <div>
         <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-          <span>{t('settingsTitle') || 'Settings & Multi-Device Cloud Sync'}</span>
+          <span>{t('settingsTitle') || 'Settings & Cloud Sync'}</span>
         </h2>
         <p className="text-xs sm:text-sm text-gold-300/70 font-medium mt-0.5">
-          Manage Owner Login, Multi-Device Cloud Sync, Language, and Backups
+          Mandala Sunitha • Sri Lakshmi Narasimha Finance
         </p>
       </div>
 
@@ -188,7 +158,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {/* 1. OWNER & MULTI-DEVICE CLOUD SYNC CARD */}
+      {/* 1. OWNER & FIREBASE CLOUD SYNC CARD */}
       <div className="rounded-3xl bg-gradient-to-br from-dark-850 via-dark-900 to-black p-5 sm:p-6 border border-gold-500/30 shadow-2xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-dark-750">
           <div className="flex items-center gap-3">
@@ -197,42 +167,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
             <div>
               <h3 className="text-lg font-black text-white flex items-center gap-2">
-                <span>Multi-Device Cloud Sync</span>
-                {isLoggedIn ? (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">
-                    🟢 Active
-                  </span>
-                ) : (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold">
-                    🟡 Login Required
-                  </span>
-                )}
+                <span>{owner?.businessName || 'Sri Lakshmi Narasimha Finance'}</span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">
+                  🟢 Live Firebase Connected
+                </span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                {isLoggedIn
-                  ? `Connected as ${owner?.businessName} (${owner?.ownerName})`
-                  : 'Log in as Owner to access and reflect data on any phone or laptop'}
+                Owner: <strong className="text-white">{owner?.ownerName || 'Mandala Sunitha'}</strong> (📱 {owner?.mobile || '8466985944'})
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenOwnerLogin}
-              className="px-3.5 py-2 rounded-xl bg-dark-850 hover:bg-dark-800 border border-gold-500/40 text-gold-400 font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5"
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Sync to Mobile (QR)</span>
-            </button>
-
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onOpenOwnerLogin}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-dark-950 font-black text-xs shadow-glow-gold hover:from-amber-600 hover:to-yellow-600 transition-all active:scale-95 flex items-center gap-1.5"
             >
               <UserCheck className="w-4 h-4" />
-              <span>{isLoggedIn ? 'Manage Account' : 'Owner Login'}</span>
+              <span>{isLoggedIn ? 'Account Profile' : 'Owner Login'}</span>
             </button>
           </div>
         </div>
@@ -240,24 +193,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Sync Status Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div className="p-3.5 rounded-2xl bg-dark-800 border border-dark-750 space-y-1">
-            <span className="text-[11px] text-slate-400">Sync Status:</span>
-            <div className="flex items-center gap-2 font-bold text-white">
-              <span
-                className={`w-2.5 h-2.5 rounded-full ${
-                  syncStatus === 'SYNCING' || isSyncing
-                    ? 'bg-amber-400 animate-spin'
-                    : syncStatus === 'OFFLINE'
-                    ? 'bg-rose-500'
-                    : 'bg-emerald-400'
-                }`}
-              />
-              <span>
-                {syncStatus === 'SYNCING' || isSyncing
-                  ? 'Syncing in background...'
-                  : syncStatus === 'OFFLINE'
-                  ? 'Offline Mode'
-                  : 'Live Cloud Connected'}
-              </span>
+            <span className="text-[11px] text-slate-400">Database:</span>
+            <div className="flex items-center gap-2 font-bold text-emerald-400 font-mono">
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
+              <span>Firebase Realtime DB</span>
             </div>
           </div>
 
@@ -287,7 +226,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-slate-400 flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5 text-gold-400" />
-            <span>Encrypted & secure storage for your daily finance business</span>
+            <span>Automatic real-time sync across Laptop & Mobile</span>
           </div>
 
           <button
@@ -304,100 +243,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* 2. FIREBASE REALTIME DATABASE */}
-      <div className="rounded-3xl bg-dark-900 border border-amber-500/30 p-5 sm:p-6 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-amber-400 font-extrabold text-sm">
-              <Flame className="w-5 h-5 text-amber-400" />
-              <span>Firebase Realtime Database Cloud Sync</span>
-            </div>
-            <p className="text-xs text-slate-400">
-              Bi-directional live cloud synchronization powered by Google Firebase Realtime Database.
-            </p>
-          </div>
-          <a
-            href="https://console.firebase.google.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[11px] px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold transition-all inline-flex items-center gap-1 w-fit"
-          >
-            <span>Open Firebase Console</span>
-            <span>↗</span>
-          </a>
-        </div>
-
-        {/* 3-Step Guide */}
-        <div className="p-3.5 rounded-2xl bg-dark-850/80 border border-dark-750 text-xs text-slate-300 space-y-2">
-          <p className="font-bold text-amber-300 text-[11px] uppercase tracking-wider">
-            Quick 1-Minute Free Setup:
-          </p>
-          <ol className="list-decimal list-inside space-y-1 text-slate-400 text-[11px] leading-relaxed">
-            <li>
-              Go to{' '}
-              <a
-                href="https://console.firebase.google.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-amber-400 underline font-medium"
-              >
-                console.firebase.google.com
-              </a>{' '}
-              and click <strong className="text-white">Add Project</strong>.
-            </li>
-            <li>
-              Go to <strong className="text-white">Build &gt; Realtime Database</strong> &gt; Click{' '}
-              <strong className="text-white">Create Database</strong>.
-            </li>
-            <li>
-              In the <strong className="text-white">Rules</strong> tab, set{' '}
-              <code className="px-1.5 py-0.5 rounded bg-black/50 text-emerald-300 font-mono text-[10px]">
-                {'{ ".read": true, ".write": true }'}
-              </code>
-              , then copy and paste your database URL below:
-            </li>
-          </ol>
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-xs font-bold text-gold-300">
-            Firebase Realtime Database URL:
-          </label>
-          <div className="flex flex-col sm:flex-row items-stretch gap-2">
-            <input
-              type="text"
-              value={firebaseUrl}
-              onChange={(e) => setFirebaseUrl(e.target.value)}
-              placeholder="https://your-project-id-default-rtdb.firebaseio.com"
-              className="flex-1 px-3.5 py-2.5 rounded-xl border border-gold-500/30 bg-dark-850 text-white text-xs font-mono outline-none focus:border-gold-400 transition-all"
-            />
-            <button
-              type="button"
-              onClick={handleSaveAndTestFirebase}
-              disabled={isTestingFb}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-dark-950 font-black text-xs shadow-glow-gold hover:from-amber-600 transition-all active:scale-95 flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isTestingFb ? 'animate-spin' : ''}`} />
-              <span>{isTestingFb ? 'Connecting...' : 'Save & Sync Firebase'}</span>
-            </button>
-          </div>
-          {fbMessage && (
-            <p
-              className={`text-xs font-bold flex items-center gap-1.5 ${
-                fbMessage.success ? 'text-emerald-400' : 'text-rose-400'
-              }`}
-            >
-              <span>{fbMessage.success ? '✓' : '⚠️'}</span>
-              <span>{fbMessage.text}</span>
-            </p>
-          )}
-          <p className="text-[11px] text-slate-500 italic">
-            💡 Tip: When you scan the <strong>Sync to Mobile (QR)</strong> from this laptop, your Firebase configuration will automatically transfer to your phone!
-          </p>
-        </div>
-      </div>
-
-      {/* 3. LANGUAGE PREFERENCE */}
+      {/* 2. LANGUAGE PREFERENCE */}
       <div className="rounded-3xl bg-dark-900 border border-gold-500/20 p-5 sm:p-6 shadow-xl space-y-3">
         <div className="flex items-center gap-2 text-gold-400 font-extrabold text-sm">
           <Globe className="w-4 h-4" />
@@ -456,16 +302,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             }`}
           >
             <Play className={`w-4 h-4 ${isPlayingSound ? 'animate-bounce' : ''}`} />
-            <span>{isPlayingSound ? 'Playing FamPay Sound...' : 'Test FamPay Sound 🔊'}</span>
+            <span>{isPlayingSound ? 'Playing Sound...' : 'Test FamPay Sound 🔊'}</span>
           </button>
-        </div>
-
-        <div className="p-3 rounded-2xl bg-dark-850 border border-dark-750 flex items-center justify-between text-xs">
-          <span className="text-slate-300 font-medium">Sound Mode:</span>
-          <span className="text-emerald-400 font-bold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            FamPay Audio Synthesizer (Active & Offline Ready)
-          </span>
         </div>
       </div>
 
@@ -502,30 +340,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onChange={handleFileImport}
               className="hidden"
             />
-            <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
               <Upload className="w-5 h-5" />
             </div>
             <div className="text-left">
               <div className="font-bold text-xs sm:text-sm">Restore from Backup</div>
-              <div className="text-[11px] text-slate-400">Upload existing .json file</div>
+              <div className="text-[11px] text-slate-400">Upload .json file</div>
             </div>
           </label>
         </div>
+      </div>
 
-        {/* Danger zone */}
-        <div className="pt-3 border-t border-dark-750 flex items-center justify-between">
-          <span className="text-xs text-slate-500">
-            Reset or clear local database:
-          </span>
-          <button
-            type="button"
-            onClick={handleClearAllWithConfirm}
-            className="px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-950/40 text-rose-400 hover:bg-rose-950 font-bold text-xs flex items-center gap-1.5 transition-all"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Clear Local Data</span>
-          </button>
+      {/* 5. DANGER ZONE */}
+      <div className="rounded-3xl bg-dark-900 border border-rose-500/20 p-5 sm:p-6 shadow-xl space-y-3">
+        <div className="flex items-center gap-2 text-rose-400 font-extrabold text-sm">
+          <Trash2 className="w-4 h-4" />
+          <span>Reset & Clear Local Storage</span>
         </div>
+        <p className="text-xs text-slate-400">
+          Clears local browser cache for this device. Your data remains safely backed up in Firebase.
+        </p>
+
+        <button
+          type="button"
+          onClick={handleClearAllWithConfirm}
+          className="px-4 py-2.5 rounded-xl border border-rose-500/40 text-rose-300 hover:bg-rose-950/50 font-bold text-xs flex items-center gap-2 transition-all active:scale-95"
+        >
+          <Trash2 className="w-4 h-4 text-rose-400" />
+          <span>Clear Local Data</span>
+        </button>
       </div>
     </div>
   );

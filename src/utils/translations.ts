@@ -3,9 +3,9 @@ export type Language = 'en' | 'te';
 export const translations = {
   en: {
     // App Header & Nav
-    appName: 'Giri-Giri',
+    appName: 'Sri Lakshmi Narasimha',
     appSubname: 'Finance',
-    appTagline: 'Village Daily Collection Book',
+    appTagline: 'Mandala Sunitha • 8466985944',
     dashboard: 'Dashboard',
     todaysRun: "Today's Run",
     customers: 'Customers',
