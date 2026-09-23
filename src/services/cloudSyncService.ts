@@ -444,6 +444,25 @@ export class CloudSyncService {
       return { success: false, error: 'PIN must be at least 4 digits.' };
     }
 
+    // 1. First check Firebase for this specific owner mobile
+    try {
+      const fbRes = await firebaseSync.pullFromFirebase(cleanMobile);
+      if (fbRes.success && fbRes.data?.owner) {
+        const fbOwner = fbRes.data.owner;
+        if (fbOwner.pin && fbOwner.pin !== cleanPin) {
+          return { success: false, error: 'Incorrect PIN for this owner account.' };
+        }
+        this.saveOwnerProfile(fbOwner);
+        if (fbRes.data) {
+          this.notifyDataListeners(fbRes.data);
+        }
+        this.notifyListeners('SYNCED', new Date().toISOString());
+        return { success: true, owner: fbOwner };
+      }
+    } catch {
+      // Ignore
+    }
+
     const savedOwner = existingOwnerProfile || this.getOwnerProfile();
     if (savedOwner && savedOwner.mobile.replace(/\D/g, '') === cleanMobile) {
       if (savedOwner.pin && savedOwner.pin !== cleanPin) {
@@ -454,7 +473,7 @@ export class CloudSyncService {
       // Pull latest from Firebase
       try {
         const fbRes = await firebaseSync.pullFromFirebase(cleanMobile);
-        if (fbRes.success && fbRes.data && (fbRes.data.customers.length > 0 || fbRes.data.payments.length > 0)) {
+        if (fbRes.success && fbRes.data) {
           this.notifyDataListeners(fbRes.data);
         }
       } catch {
@@ -464,11 +483,11 @@ export class CloudSyncService {
       return { success: true, owner: savedOwner };
     }
 
-    // Create / Connect owner profile
+    // Create / Connect new owner profile
     const ownerProfile: OwnerProfile = {
       id: `OWN-${cleanMobile.slice(-4)}`,
-      ownerName: savedOwner?.ownerName || 'Finance Owner',
-      businessName: savedOwner?.businessName || 'Sri Lakshmi Narsimha Finance',
+      ownerName: 'Finance Owner',
+      businessName: 'Sri Lakshmi Narsimha Finance',
       mobile: cleanMobile,
       pin: cleanPin,
       createdAt: new Date().toISOString(),
@@ -478,12 +497,9 @@ export class CloudSyncService {
 
     this.saveOwnerProfile(ownerProfile);
 
-    // Pull from Firebase
+    // Push new owner node to Firebase immediately so it appears under /owners/
     try {
-      const fbRes = await firebaseSync.pullFromFirebase(cleanMobile);
-      if (fbRes.success && fbRes.data && (fbRes.data.customers.length > 0 || fbRes.data.payments.length > 0)) {
-        this.notifyDataListeners(fbRes.data);
-      }
+      await firebaseSync.pushToFirebase(ownerProfile, [], []);
     } catch {
       // Ignore
     }

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { OwnerProfile, CloudSyncStatus } from '../types/finance';
 import { cloudSync } from '../services/cloudSyncService';
+import { firebaseSync } from '../services/firebaseSyncService';
 
 interface AuthContextType {
   owner: OwnerProfile | null;
@@ -79,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       pin: string;
       email?: string;
     }): Promise<{ success: boolean; error?: string }> => {
-      const cleanMobile = data.mobile.trim().replace(/\D/g, '');
+      const cleanMobile = data.mobile.trim().replace(/\D/g, '').slice(-10);
       const cleanPin = data.pin.trim();
 
       if (!data.ownerName.trim()) {
@@ -109,6 +110,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       cloudSync.saveOwnerProfile(newOwner);
       setOwner(newOwner);
+
+      // Immediately push new owner node to Firebase Realtime Database
+      try {
+        await firebaseSync.pushToFirebase(newOwner, [], []);
+      } catch {
+        // Ignore
+      }
+
       return { success: true };
     },
     [activeDeviceId]
@@ -125,6 +134,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updated = { ...owner, ...updates, updatedAt: new Date().toISOString() };
       cloudSync.saveOwnerProfile(updated);
       setOwner(updated);
+      try {
+        const custs = JSON.parse(localStorage.getItem('giri_giri_customers_v2') || '[]');
+        const pays = JSON.parse(localStorage.getItem('giri_giri_payments_v2') || '[]');
+        firebaseSync.pushToFirebase(updated, custs, pays);
+      } catch {
+        // Ignore
+      }
     },
     [owner]
   );
