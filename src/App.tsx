@@ -11,7 +11,8 @@ import { CustomerFormModal } from './components/customers/CustomerFormModal';
 import { QuickPaymentModal } from './components/today/QuickPaymentModal';
 import { TransactionHistoryView } from './components/history/TransactionHistoryView';
 import { ReportsView } from './components/reports/ReportsView';
-import { BackupRestoreView } from './components/settings/BackupRestoreView';
+import { SettingsView } from './components/settings/SettingsView';
+import { OwnerLoginModal } from './components/auth/OwnerLoginModal';
 import { computeCustomerFinancialProfile } from './utils/financeCalculations';
 
 export const App: React.FC = () => {
@@ -26,19 +27,20 @@ export const App: React.FC = () => {
     deleteCustomer,
     recordPayment,
     deletePayment,
-    loadDemo,
     clearAll,
     restoreFromBackup,
+    syncNow,
   } = useFinanceData();
 
   // Navigation State
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [activeTab, setActiveTab] = useState<string>('today');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   // Modal States
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [quickPayCustomer, setQuickPayCustomer] = useState<Customer | null>(null);
+  const [isOwnerLoginOpen, setIsOwnerLoginOpen] = useState(false);
 
   // Calculate pending count for today badge on mobile bottom nav
   const todayPendingCount = customers.reduce((count, c) => {
@@ -71,7 +73,6 @@ export const App: React.FC = () => {
   };
 
   const handleSelectCustomer = (customer: Customer) => {
-    // Refresh latest reference
     const latest = customers.find((c) => c.id === customer.id) || customer;
     setSelectedCustomer(latest);
   };
@@ -85,13 +86,17 @@ export const App: React.FC = () => {
   };
 
   const handleNavigateToTab = (tab: string) => {
-    setActiveTab(tab);
+    if (tab === 'backup') {
+      setActiveTab('settings');
+    } else {
+      setActiveTab(tab);
+    }
     setSelectedCustomer(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-brand-500 selection:text-white">
+    <div className="min-h-screen bg-dark-950 text-white flex flex-col font-sans selection:bg-gold-500 selection:text-dark-950">
       {/* Top Brand Navbar */}
       <Navbar
         todayDate={todayDate}
@@ -99,10 +104,11 @@ export const App: React.FC = () => {
         onOpenAddCustomer={handleOpenAddCustomer}
         onNavigateToTab={handleNavigateToTab}
         activeTab={activeTab}
+        onOpenOwnerLogin={() => setIsOwnerLoginOpen(true)}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* If a customer detail passbook is selected */}
         {selectedCustomer ? (
           <CustomerDetailView
@@ -116,6 +122,16 @@ export const App: React.FC = () => {
           />
         ) : (
           <>
+            {activeTab === 'today' && (
+              <TodayCollectionView
+                customers={customers}
+                payments={payments}
+                onRecordPayment={recordPayment}
+                onSelectCustomer={handleSelectCustomer}
+                todayDate={todayDate}
+              />
+            )}
+
             {activeTab === 'dashboard' && (
               <DashboardView
                 stats={stats}
@@ -124,16 +140,6 @@ export const App: React.FC = () => {
                 onNavigateToTab={handleNavigateToTab}
                 onSelectCustomer={handleSelectCustomer}
                 onOpenAddCustomer={handleOpenAddCustomer}
-                todayDate={todayDate}
-              />
-            )}
-
-            {activeTab === 'today' && (
-              <TodayCollectionView
-                customers={customers}
-                payments={payments}
-                onRecordPayment={recordPayment}
-                onSelectCustomer={handleSelectCustomer}
                 todayDate={todayDate}
               />
             )}
@@ -167,13 +173,14 @@ export const App: React.FC = () => {
               />
             )}
 
-            {activeTab === 'backup' && (
-              <BackupRestoreView
+            {activeTab === 'settings' && (
+              <SettingsView
                 customers={customers}
                 payments={payments}
                 onRestoreBackup={restoreFromBackup}
-                onLoadDemoData={loadDemo}
                 onClearAllData={clearAll}
+                onOpenOwnerLogin={() => setIsOwnerLoginOpen(true)}
+                onSyncNow={syncNow}
               />
             )}
           </>
@@ -209,6 +216,14 @@ export const App: React.FC = () => {
           todayDate={todayDate}
         />
       )}
+
+      {/* Owner Login & Multi-Device Cloud Sync Modal */}
+      <OwnerLoginModal
+        isOpen={isOwnerLoginOpen}
+        onClose={() => setIsOwnerLoginOpen(false)}
+        onSyncNow={syncNow}
+      />
     </div>
   );
 };
+

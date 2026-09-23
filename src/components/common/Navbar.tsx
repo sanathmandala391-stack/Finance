@@ -3,12 +3,14 @@ import {
   Calendar,
   PlusCircle,
   IndianRupee,
-  RefreshCw,
   Sparkles,
   Languages,
+  Cloud,
+  Settings,
 } from 'lucide-react';
 import { formatDisplayDate, getTodayISO } from '../../utils/dateUtils';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useAuth } from '../../context/AuthContext';
 
 interface NavbarProps {
   todayDate: string;
@@ -16,6 +18,7 @@ interface NavbarProps {
   onOpenAddCustomer: () => void;
   onNavigateToTab: (tab: string) => void;
   activeTab: string;
+  onOpenOwnerLogin: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -24,8 +27,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddCustomer,
   onNavigateToTab,
   activeTab,
+  onOpenOwnerLogin,
 }) => {
   const { lang, setLang, t } = useLanguage();
+  const { owner, isLoggedIn, syncStatus } = useAuth();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
@@ -53,13 +58,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <p className="text-[10px] sm:text-xs text-gold-200/60 font-medium hidden sm:block">
-                {t('appTagline')}
+                {isLoggedIn && owner ? `${owner.businessName} • Cross-Device Live` : t('appTagline')}
               </p>
             </div>
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-dark-900/90 p-1.5 rounded-2xl border border-gold-500/20 text-xs sm:text-sm font-bold shadow-inner">
+          <nav className="hidden lg:flex items-center gap-1 bg-dark-900/90 p-1.5 rounded-2xl border border-gold-500/20 text-xs sm:text-sm font-bold shadow-inner">
             <button
               onClick={() => onNavigateToTab('dashboard')}
               className={`px-3.5 py-1.5 rounded-xl transition-all ${
@@ -112,28 +117,58 @@ export const Navbar: React.FC<NavbarProps> = ({
               {t('reports')}
             </button>
             <button
-              onClick={() => onNavigateToTab('backup')}
-              className={`px-3.5 py-1.5 rounded-xl transition-all ${
-                activeTab === 'backup'
+              onClick={() => onNavigateToTab('settings')}
+              className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                activeTab === 'settings'
                   ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-dark-950 shadow-md font-extrabold'
                   : 'text-slate-300 hover:text-gold-400'
               }`}
             >
-              {t('backup')}
+              <Settings className="w-3.5 h-3.5" />
+              <span>{t('settingsTitle') || 'Settings'}</span>
             </button>
           </nav>
 
-          {/* Right Tools (Language Switcher + Date Selector + Add Customer) */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Language Switcher (English / తెలుగు) */}
+          {/* Right Tools (Owner Cloud Sync + Language + Date + Add Customer) */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Owner & Cloud Sync Badge */}
+            <button
+              onClick={onOpenOwnerLogin}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 shadow-sm ${
+                isLoggedIn
+                  ? 'bg-dark-900 border-emerald-500/40 text-emerald-300 hover:border-emerald-400'
+                  : 'bg-gradient-to-r from-gold-500/10 to-amber-500/10 border-gold-500/40 text-gold-300 hover:bg-gold-500/20'
+              }`}
+              title={isLoggedIn ? 'Owner Cloud Connected' : 'Owner Login for Multi-Device Sync'}
+            >
+              <Cloud
+                className={`w-4 h-4 ${
+                  syncStatus === 'SYNCING'
+                    ? 'animate-spin text-amber-400'
+                    : isLoggedIn
+                    ? 'text-emerald-400'
+                    : 'text-gold-400'
+                }`}
+              />
+              <span className="hidden sm:inline font-bold">
+                {isLoggedIn ? (owner?.ownerName || 'Owner') : 'Owner Login'}
+              </span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isLoggedIn ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                }`}
+              />
+            </button>
+
+            {/* Language Switcher */}
             <div className="relative">
               <button
                 onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-dark-900 border border-gold-500/30 text-gold-400 hover:border-gold-400 hover:bg-dark-850 text-xs font-bold transition-all shadow-sm"
-                title="Switch Language / భాషను మార్చండి"
+                className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-dark-900 border border-gold-500/30 text-gold-400 hover:border-gold-400 hover:bg-dark-850 text-xs font-bold transition-all shadow-sm"
+                title="Switch Language"
               >
                 <Languages className="w-4 h-4 text-amber-400" />
-                <span>{lang === 'te' ? 'తెలుగు' : 'English'}</span>
+                <span className="hidden sm:inline">{lang === 'te' ? 'తెలుగు' : 'EN'}</span>
               </button>
 
               {isLangMenuOpen && (
@@ -170,7 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* Date Simulator Widget */}
+            {/* Date Selector */}
             <div className="relative">
               <button
                 onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
@@ -179,19 +214,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ? 'bg-dark-900 text-slate-200 border-gold-500/30 hover:border-gold-400'
                     : 'bg-amber-950 text-amber-300 border-amber-500 animate-pulse'
                 }`}
-                title="Active Date"
+                title="Active Collection Date"
               >
                 <Calendar className="w-3.5 h-3.5 text-gold-400" />
                 <span>{formatDisplayDate(todayDate, false)}</span>
-                {!isRealToday && (
-                  <span className="text-[10px] bg-amber-500 text-dark-950 rounded px-1 font-black">
-                    {t('simulated')}
-                  </span>
-                )}
               </button>
 
               {isDatePickerOpen && (
-                <div className="absolute right-0 mt-2 p-3 w-64 bg-dark-900 border border-gold-500/40 rounded-2xl shadow-2xl z-50 animate-scale-in">
+                <div className="absolute right-0 mt-2 p-3 w-60 bg-dark-900 border border-gold-500/40 rounded-2xl shadow-2xl z-50 animate-scale-in">
                   <div className="text-xs font-bold text-gold-400 mb-2">
                     {t('activeDate')}:
                   </div>
@@ -206,21 +236,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="w-full px-2.5 py-2 text-xs font-mono rounded-xl border border-gold-500/30 bg-dark-800 text-white outline-none focus:border-gold-400"
                   />
-                  <div className="mt-3 flex items-center justify-between pt-2 border-t border-dark-750 text-xs">
+                  <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-dark-750 text-xs">
                     <button
                       onClick={() => {
                         onDateChange(getTodayISO());
                         setIsDatePickerOpen(false);
                       }}
-                      className="text-gold-400 font-bold hover:underline flex items-center gap-1"
+                      className="text-gold-400 font-bold hover:underline text-[11px]"
                     >
-                      <RefreshCw className="w-3 h-3" /> {t('resetDate')}
+                      Today
                     </button>
                     <button
                       onClick={() => setIsDatePickerOpen(false)}
-                      className="text-slate-400 hover:text-white"
+                      className="text-slate-400 hover:text-white text-[11px]"
                     >
-                      Done
+                      Close
                     </button>
                   </div>
                 </div>
@@ -230,10 +260,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Quick Add Customer Button */}
             <button
               onClick={onOpenAddCustomer}
-              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:to-yellow-600 active:scale-95 text-dark-950 font-black text-xs sm:text-sm rounded-xl shadow-glow-gold transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:to-yellow-600 active:scale-95 text-dark-950 font-black text-xs sm:text-sm rounded-xl shadow-glow-gold transition-all"
             >
               <PlusCircle className="w-4 h-4 stroke-[2.5]" />
-              <span>{t('addCustomer')}</span>
+              <span className="hidden sm:inline">{t('addCustomer')}</span>
+              <span className="sm:hidden">+ New</span>
             </button>
           </div>
         </div>
@@ -241,3 +272,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+

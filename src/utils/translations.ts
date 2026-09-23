@@ -128,15 +128,19 @@ export const translations = {
     villagePerformance: 'Village Collection Performance',
     defaultersList: 'Defaulters List & Risk Score',
 
-    // Data / Backup
-    backupTitle: 'Backup, Restore & Data Portability',
-    backupSubtitle: '100% offline data stored in your browser localStorage. Keep regular backups.',
+    // Data / Backup / Settings
+    settingsTitle: 'Settings & Cloud Sync',
+    backupTitle: 'Backup, Restore & Multi-Device Sync',
+    backupSubtitle: 'Encrypted multi-device cloud sync and offline JSON backups.',
     downloadJSON: 'Download JSON Backup File',
     restoreJSON: 'Restore from Backup File',
     clearAllData: 'Clear All Data',
     loadDemoData: 'Load Sample Village Data',
-    localStorageStatus: 'Local Storage Status',
+    localStorageStatus: 'Storage & Sync Status',
     zeroFakeData: 'Clean Slate: Start entering your real customer loans.',
+    ownerLogin: 'Owner Login',
+    cloudSynced: 'Live Cloud Synced',
+    syncNow: 'Sync Now',
   },
   te: {
     // App Header & Nav
@@ -265,14 +269,18 @@ export const translations = {
     villagePerformance: 'గ్రామాల వారీ వసూళ్ల సామర్థ్యం',
     defaultersList: 'బాకీదారుల జాబితా & రిస్క్ స్కోర్',
 
-    // Data / Backup
-    backupTitle: 'బ్యాకప్, పునరుద్ధరణ & డేటా రక్షణ',
-    backupSubtitle: '100% ఆఫ్‌లైన్ డేటా మీ బ్రౌజర్‌లోనే సురక్షితంగా ఉంటుంది. బ్యాకప్ ఫైల్ డౌన్‌లోడ్ చేసుకోండి.',
+    // Data / Backup / Settings
+    settingsTitle: 'సెట్టింగ్‌లు & క్లౌడ్ సింక్',
+    backupTitle: 'బ్యాకప్, పునరుద్ధరణ & క్లౌడ్ సింక్',
+    backupSubtitle: 'ఏ పరికరంలోనైనా లాగిన్ అయ్యి పూర్తి డేటాను నిజ సమయంలో యాక్సెస్ చేయండి.',
     downloadJSON: 'JSON బ్యాకప్ ఫైల్ డౌన్‌లోడ్',
     restoreJSON: 'బ్యాకప్ ఫైల్ నుండి పునరుద్ధరించండి',
     clearAllData: 'మొత్తం డేటా క్లియర్ చేయండి',
     loadDemoData: 'నమూనా డేటా లోడ్ చేయండి',
-    localStorageStatus: 'లోకల్ స్టోరేజ్ స్థితి',
+    localStorageStatus: 'స్టోరేజ్ & సింక్ స్థితి',
     zeroFakeData: 'పూర్తిగా ఖాళీగా ప్రారంభించండి: మీ నిజమైన కస్టమర్ వివరాలు నమోదు చేయండి.',
+    ownerLogin: 'యజమాని లాగిన్',
+    cloudSynced: 'లైవ్ క్లౌడ్ సింక్ చేయబడింది',
+    syncNow: 'ఇప్పుడే సింక్ చేయండి',
   },
 };

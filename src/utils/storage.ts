@@ -61,6 +61,20 @@ export function createBackupJSON(customers: Customer[], payments: PaymentRecord[
 }
 
 /**
+ * Export backup directly as downloadable JSON file
+ */
+export function exportBackupToJSON(customers: Customer[], payments: PaymentRecord[]): void {
+  const jsonString = createBackupJSON(customers, payments);
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Giri-Giri-Finance-Backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Parse and validate JSON backup
  */
 export function parseAndValidateBackup(jsonString: string): { success: boolean; data?: BackupData; error?: string } {
@@ -77,6 +91,19 @@ export function parseAndValidateBackup(jsonString: string): { success: boolean; 
     return { success: false, error: (e as Error)?.message || 'Failed to parse JSON backup file.' };
   }
 }
+
+/**
+ * Parse uploaded backup file
+ */
+export async function parseBackupFile(file: File): Promise<BackupData> {
+  const text = await file.text();
+  const res = parseAndValidateBackup(text);
+  if (!res.success || !res.data) {
+    throw new Error(res.error || 'Failed to parse backup file.');
+  }
+  return res.data;
+}
+
 
 /**
  * Generate realistic Indian Village sample data for immediate demo & testing

@@ -4,8 +4,7 @@ import {
   Users,
   Sparkles,
   Receipt,
-  Database,
-  BarChart3,
+  Settings,
 } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 
@@ -23,17 +22,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const { t } = useLanguage();
 
   const navItems = [
-    { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
     { id: 'today', label: t('todaysRun'), icon: Sparkles, badge: pendingCount > 0 ? pendingCount : undefined },
     { id: 'customers', label: t('customers'), icon: Users },
+    { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
     { id: 'history', label: t('ledger'), icon: Receipt },
-    { id: 'reports', label: t('reports'), icon: BarChart3 },
-    { id: 'backup', label: t('backup'), icon: Database },
+    { id: 'settings', label: t('settingsTitle') || 'Settings', icon: Settings },
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-dark-950/95 backdrop-blur-lg border-t border-gold-500/20 pb-safe shadow-2xl">
-      <div className="grid grid-cols-6 items-center h-16 px-1">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-dark-950/95 backdrop-blur-lg border-t border-gold-500/20 pb-safe shadow-2xl">
+      <div className="grid grid-cols-5 items-center h-16 px-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -54,12 +52,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   }`}
                 />
                 {item.badge !== undefined && (
-                  <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[9px] font-black rounded-full px-1 min-w-[14px] h-[14px] flex items-center justify-center border-2 border-dark-950 shadow-sm animate-bounce">
+                  <span className="absolute -top-1.5 -right-2.5 bg-rose-500 text-white text-[9px] font-black rounded-full px-1 min-w-[14px] h-[14px] flex items-center justify-center border-2 border-dark-950 shadow-sm animate-bounce">
                     {item.badge}
                   </span>
                 )}
               </div>
-              <span className="text-[9px] sm:text-[10px] mt-1 truncate max-w-full">
+              <span className="text-[10px] mt-1 truncate max-w-full font-semibold">
                 {item.label}
               </span>
               {isActive && (
@@ -72,3 +70,4 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     </div>
   );
 };
+

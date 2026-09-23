@@ -105,3 +105,26 @@ export interface BackupData {
   customers: Customer[];
   payments: PaymentRecord[];
 }
+
+export type CloudSyncStatus = 'IDLE' | 'SYNCING' | 'SYNCED' | 'OFFLINE' | 'ERROR';
+
+export interface OwnerProfile {
+  id: string;              // Unique Owner Account ID (e.g. "OWN-749210")
+  businessName: string;    // e.g. "Sri Lakshmi Daily Finance"
+  ownerName: string;       // e.g. "B. Gopi"
+  mobile: string;          // e.g. "9876543210"
+  pin: string;             // 4 or 6-digit quick access PIN
+  email?: string;
+  createdAt: string;
+  lastLoginAt: string;
+  activeDeviceId?: string;
+}
+
+export interface SyncMetadata {
+  lastSyncedAt: string | null;
+  syncStatus: CloudSyncStatus;
+  pendingChangesCount: number;
+  syncError?: string | null;
+  serverVersion?: number;
+}
+
