@@ -15,8 +15,11 @@ import {
   Lock,
   UserCheck,
   Check,
+  Volume2,
+  Play,
 } from 'lucide-react';
 import { exportBackupToJSON, parseBackupFile } from '../../utils/storage';
+import { useSoundEffects } from '../../hooks/useSoundEffects';
 
 interface SettingsViewProps {
   customers: Customer[];
@@ -36,6 +39,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onSyncNow,
 }) => {
   const { lang, setLang, t } = useLanguage();
+  const { playPaymentSuccessSound } = useSoundEffects();
   const {
     owner,
     isLoggedIn,
@@ -45,10 +49,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   } = useAuth();
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isPlayingSound, setIsPlayingSound] = useState(false);
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+
+  const handleTestSound = () => {
+    setIsPlayingSound(true);
+    playPaymentSuccessSound();
+    setTimeout(() => setIsPlayingSound(false), 800);
+  };
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -290,7 +301,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* 3. DATA BACKUP & RESTORE */}
+      {/* 3. PAYMENT AUDIO & SOUND EFFECTS */}
+      <div className="rounded-3xl bg-dark-900 border border-gold-500/20 p-5 sm:p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-gold-400 font-extrabold text-sm">
+              <Volume2 className="w-4 h-4" />
+              <span>Payment Confirmation Audio (FamPay Chime)</span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Plays instant zero-latency FamPay UPI confirmation sound on every marked collection and settled due.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleTestSound}
+            className={`px-4 py-2.5 rounded-2xl border font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0 ${
+              isPlayingSound
+                ? 'bg-gold-400 text-dark-950 border-gold-300 shadow-glow-gold scale-105'
+                : 'bg-dark-800 hover:bg-dark-750 text-gold-400 border-gold-500/30'
+            }`}
+          >
+            <Play className={`w-4 h-4 ${isPlayingSound ? 'animate-bounce' : ''}`} />
+            <span>{isPlayingSound ? 'Playing FamPay Sound...' : 'Test FamPay Sound 🔊'}</span>
+          </button>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-dark-850 border border-dark-750 flex items-center justify-between text-xs">
+          <span className="text-slate-300 font-medium">Sound Mode:</span>
+          <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            FamPay Audio Synthesizer (Active & Offline Ready)
+          </span>
+        </div>
+      </div>
+
+      {/* 4. DATA BACKUP & RESTORE */}
       <div className="rounded-3xl bg-dark-900 border border-gold-500/20 p-5 sm:p-6 shadow-xl space-y-4">
         <div>
           <h3 className="text-base font-extrabold text-white">
