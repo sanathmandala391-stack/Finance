@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinanceData } from './hooks/useFinanceData';
 import { Customer } from './types/finance';
 import { Navbar } from './components/common/Navbar';
@@ -14,6 +14,7 @@ import { ReportsView } from './components/reports/ReportsView';
 import { SettingsView } from './components/settings/SettingsView';
 import { OwnerLoginModal } from './components/auth/OwnerLoginModal';
 import { computeCustomerFinancialProfile } from './utils/financeCalculations';
+import { cloudSync } from './services/cloudSyncService';
 
 export const App: React.FC = () => {
   const {
@@ -31,6 +32,34 @@ export const App: React.FC = () => {
     restoreFromBackup,
     syncNow,
   } = useFinanceData();
+
+  // Auto-detect and import sync payload from QR code scan or share link
+  useEffect(() => {
+    const handleUrlSync = async () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes('sync=')) {
+        const syncParam = hash.split('sync=')[1];
+        if (syncParam) {
+          const res = await cloudSync.importCompressedSyncData(decodeURIComponent(syncParam));
+          if (res.success && res.data) {
+            restoreFromBackup({
+              app: 'giri-giri-finance',
+              customers: res.data.customers,
+              payments: res.data.payments,
+              exportDate: res.data.timestamp,
+              version: '2.0',
+            });
+            if (res.data.owner) {
+              cloudSync.saveOwnerProfile(res.data.owner);
+            }
+            alert(`✨ Data successfully synchronized!\n\nImported ${res.data.customers.length} customers and ${res.data.payments.length} transactions from ${res.data.sourceDevice}.`);
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }
+      }
+    };
+    handleUrlSync();
+  }, [restoreFromBackup]);
 
   // Navigation State
   const [activeTab, setActiveTab] = useState<string>('today');

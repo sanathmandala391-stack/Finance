@@ -36,84 +36,48 @@ export function useFinanceData() {
     savePaymentsToStorage(payments);
   }, [payments]);
 
-  // Pull latest data from Cloud on login or owner change
+  // Listen to live data broadcasts from other tabs/devices
   useEffect(() => {
-    if (owner) {
-      cloudSync.pullFromCloud(owner).then((res) => {
-        if (res.success && res.data) {
-          if (res.data.customers.length > 0 || res.data.payments.length > 0) {
-            setCustomers(res.data.customers);
-            setPayments(res.data.payments);
-          } else {
-            // If cloud is empty but local has data, upload local data to cloud
-            setCustomers((currentCusts) => {
-              setPayments((currentPays) => {
-                if (currentCusts.length > 0 || currentPays.length > 0) {
-                  cloudSync.pushToCloud(owner, currentCusts, currentPays);
-                }
-                return currentPays;
-              });
-              return currentCusts;
-            });
+    const unsubscribe = cloudSync.subscribeToData((remoteData) => {
+      if (remoteData.customers && Array.isArray(remoteData.customers)) {
+        setCustomers((prev) => {
+          // If remote dataset differs, update state
+          if (JSON.stringify(prev) !== JSON.stringify(remoteData.customers)) {
+            return remoteData.customers;
           }
-        }
-      });
-    }
-  }, [owner?.id, owner?.mobile]);
+          return prev;
+        });
+      }
+      if (remoteData.payments && Array.isArray(remoteData.payments)) {
+        setPayments((prev) => {
+          if (JSON.stringify(prev) !== JSON.stringify(remoteData.payments)) {
+            return remoteData.payments;
+          }
+          return prev;
+        });
+      }
+    });
 
-  // Auto-sync whenever owner is active and data changes
+    return () => unsubscribe();
+  }, []);
+
+  // Broadcast state changes whenever owner is active
   const syncToCloud = useCallback(
     (newCusts: Customer[], newPays: PaymentRecord[]) => {
       if (owner) {
-        cloudSync.pushToCloud(owner, newCusts, newPays);
+        cloudSync.broadcastUpdate(owner, newCusts, newPays);
       }
     },
     [owner]
   );
-
-  // Background sync listener (for when changes happen on another device / tab)
-  useEffect(() => {
-    if (!owner) return;
-
-    const handleBackgroundRefresh = async () => {
-      const res = await cloudSync.pullFromCloud(owner);
-      if (res.success && res.data) {
-        if (res.data.customers.length > 0 || res.data.payments.length > 0) {
-          setCustomers((prevCusts) => {
-            if (JSON.stringify(prevCusts) !== JSON.stringify(res.data!.customers)) {
-              return res.data!.customers;
-            }
-            return prevCusts;
-          });
-          setPayments((prevPays) => {
-            if (JSON.stringify(prevPays) !== JSON.stringify(res.data!.payments)) {
-              return res.data!.payments;
-            }
-            return prevPays;
-          });
-        }
-      }
-    };
-
-    cloudSync.startPeriodicSync(handleBackgroundRefresh, 10000);
-    return () => cloudSync.stopPeriodicSync();
-  }, [owner]);
-
 
   // Manual Trigger Sync
   const syncNow = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     if (!owner) {
       return { success: false, error: 'Owner not logged in.' };
     }
-    const pullRes = await cloudSync.pullFromCloud(owner);
-    if (pullRes.success && pullRes.data) {
-      if (pullRes.data.customers.length > 0 || pullRes.data.payments.length > 0) {
-        setCustomers(pullRes.data.customers);
-        setPayments(pullRes.data.payments);
-      }
-    }
-    const pushRes = await cloudSync.pushToCloud(owner, customers, payments);
-    return pushRes;
+    cloudSync.broadcastUpdate(owner, customers, payments);
+    return { success: true };
   }, [owner, customers, payments]);
 
   // Global summary statistics computed reactively
@@ -327,7 +291,7 @@ export function useFinanceData() {
     localStorage.removeItem('giri_giri_customers_v1');
     localStorage.removeItem('giri_giri_payments_v1');
     if (owner) {
-      cloudSync.pushToCloud(owner, [], []);
+      cloudSync.broadcastUpdate(owner, [], []);
     }
   }, [owner]);
 

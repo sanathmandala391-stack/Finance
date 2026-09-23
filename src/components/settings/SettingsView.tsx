@@ -17,6 +17,7 @@ import {
   Check,
   Volume2,
   Play,
+  QrCode,
 } from 'lucide-react';
 import { exportBackupToJSON, parseBackupFile } from '../../utils/storage';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
@@ -186,7 +187,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenOwnerLogin}
+              className="px-3.5 py-2 rounded-xl bg-dark-850 hover:bg-dark-800 border border-gold-500/40 text-gold-400 font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5"
+            >
+              <QrCode className="w-4 h-4" />
+              <span>Sync to Mobile (QR)</span>
+            </button>
+
             <button
               type="button"
               onClick={onOpenOwnerLogin}

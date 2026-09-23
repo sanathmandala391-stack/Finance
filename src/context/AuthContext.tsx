@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   /**
-   * Login with Mobile or Account ID + PIN (searches cloud registry over HTTP)
+   * Login with Mobile Number + PIN (connects and syncs across devices)
    */
   const login = useCallback(
     async (mobileOrId: string, pin: string): Promise<{ success: boolean; error?: string }> => {
@@ -48,29 +48,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const cleanPin = pin.trim();
 
       if (!cleanInput) {
-        return { success: false, error: 'Please enter Mobile Number or Account ID.' };
+        return { success: false, error: 'Please enter Mobile Number.' };
       }
       if (!cleanPin) {
         return { success: false, error: 'Please enter your Secret PIN.' };
       }
 
-      // 1. Try Live Cloud Registry Lookup
-      const cloudRes = await cloudSync.lookupAndAuthOwner(cleanInput, cleanPin);
-      if (cloudRes.success && cloudRes.owner) {
-        setOwner(cloudRes.owner);
+      const res = await cloudSync.loginOwnerLocallyOrSync(cleanInput, cleanPin, owner);
+      if (res.success && res.owner) {
+        setOwner(res.owner);
         return { success: true };
       }
 
       return {
         success: false,
-        error: cloudRes.error || 'Invalid Mobile Number / Account ID or incorrect PIN.',
+        error: res.error || 'Invalid Mobile Number or incorrect PIN.',
       };
     },
-    []
+    [owner]
   );
 
   /**
-   * Register a new Owner Account in Cloud Database
+   * Register or Set Up an Owner Profile
    */
   const register = useCallback(
     async (data: {
@@ -96,18 +95,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: 'PIN must be at least 4 digits.' };
       }
 
-      const res = await cloudSync.registerOwnerInCloud(data);
-      if (res.success && res.owner) {
-        setOwner(res.owner);
-        return { success: true };
-      }
-
-      return {
-        success: false,
-        error: res.error || 'Failed to create cloud account.',
+      const newOwner: OwnerProfile = {
+        id: `OWN-${cleanMobile.slice(-4)}`,
+        ownerName: data.ownerName.trim(),
+        businessName: data.businessName.trim(),
+        mobile: cleanMobile,
+        pin: cleanPin,
+        email: data.email?.trim(),
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        activeDeviceId: activeDeviceId,
       };
+
+      cloudSync.saveOwnerProfile(newOwner);
+      setOwner(newOwner);
+      return { success: true };
     },
-    []
+    [activeDeviceId]
   );
 
   const logout = useCallback(() => {
