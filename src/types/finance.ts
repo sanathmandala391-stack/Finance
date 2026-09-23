@@ -118,6 +118,7 @@ export interface OwnerProfile {
   createdAt: string;
   lastLoginAt: string;
   activeDeviceId?: string;
+  cloudRecordId?: string;  // Cloud database storage record ID
 }
 
 export interface SyncMetadata {

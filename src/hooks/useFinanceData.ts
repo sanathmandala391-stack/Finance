@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Customer, PaymentRecord, PaymentMethod, BackupData, FinanceSummaryStats } from '../types/finance';
 import { getTodayISO } from '../utils/dateUtils';
 import { calculateCustomerFinanceDetails, calculateSummaryStats } from '../utils/financeCalculations';
@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 
 export function useFinanceData() {
   const { owner } = useAuth();
-  const isInitialSyncDone = useRef(false);
+
 
   // Start with local storage
   const [customers, setCustomers] = useState<Customer[]>(() => {
@@ -36,36 +36,30 @@ export function useFinanceData() {
     savePaymentsToStorage(payments);
   }, [payments]);
 
-  // Initial pull & merge from Cloud on login/mount
+  // Pull latest data from Cloud on login or owner change
   useEffect(() => {
-    if (owner && !isInitialSyncDone.current) {
+    if (owner) {
       cloudSync.pullFromCloud(owner).then((res) => {
         if (res.success && res.data) {
           if (res.data.customers.length > 0 || res.data.payments.length > 0) {
-            // Merge cloud data with local
-            setCustomers((localCusts) => {
-              const map = new Map<string, Customer>();
-              // Put local first, then cloud overrides
-              localCusts.forEach((c) => map.set(c.id, c));
-              res.data!.customers.forEach((c) => map.set(c.id, c));
-              return Array.from(map.values());
-            });
-
-            setPayments((localPays) => {
-              const map = new Map<string, PaymentRecord>();
-              localPays.forEach((p) => map.set(p.id, p));
-              res.data!.payments.forEach((p) => map.set(p.id, p));
-              return Array.from(map.values());
-            });
+            setCustomers(res.data.customers);
+            setPayments(res.data.payments);
           } else {
-            // First time owner has cloud record - push local data to initialize cloud
-            cloudSync.pushToCloud(owner, customers, payments);
+            // If cloud is empty but local has data, upload local data to cloud
+            setCustomers((currentCusts) => {
+              setPayments((currentPays) => {
+                if (currentCusts.length > 0 || currentPays.length > 0) {
+                  cloudSync.pushToCloud(owner, currentCusts, currentPays);
+                }
+                return currentPays;
+              });
+              return currentCusts;
+            });
           }
         }
-        isInitialSyncDone.current = true;
       });
     }
-  }, [owner]);
+  }, [owner?.id, owner?.mobile]);
 
   // Auto-sync whenever owner is active and data changes
   const syncToCloud = useCallback(
@@ -84,24 +78,27 @@ export function useFinanceData() {
     const handleBackgroundRefresh = async () => {
       const res = await cloudSync.pullFromCloud(owner);
       if (res.success && res.data) {
-        setCustomers((prev) => {
-          if (JSON.stringify(prev) !== JSON.stringify(res.data!.customers)) {
-            return res.data!.customers;
-          }
-          return prev;
-        });
-        setPayments((prev) => {
-          if (JSON.stringify(prev) !== JSON.stringify(res.data!.payments)) {
-            return res.data!.payments;
-          }
-          return prev;
-        });
+        if (res.data.customers.length > 0 || res.data.payments.length > 0) {
+          setCustomers((prevCusts) => {
+            if (JSON.stringify(prevCusts) !== JSON.stringify(res.data!.customers)) {
+              return res.data!.customers;
+            }
+            return prevCusts;
+          });
+          setPayments((prevPays) => {
+            if (JSON.stringify(prevPays) !== JSON.stringify(res.data!.payments)) {
+              return res.data!.payments;
+            }
+            return prevPays;
+          });
+        }
       }
     };
 
-    cloudSync.startPeriodicSync(handleBackgroundRefresh, 15000);
+    cloudSync.startPeriodicSync(handleBackgroundRefresh, 10000);
     return () => cloudSync.stopPeriodicSync();
   }, [owner]);
+
 
   // Manual Trigger Sync
   const syncNow = useCallback(async (): Promise<{ success: boolean; error?: string }> => {

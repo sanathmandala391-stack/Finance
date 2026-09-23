@@ -22,8 +22,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const OWNER_REGISTRY_KEY = 'giri_giri_registered_owners_v1';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [owner, setOwner] = useState<OwnerProfile | null>(() => {
     return cloudSync.getOwnerProfile();
@@ -40,108 +38,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  /**
-   * Helper to load all registered owners (simulated multi-device registry)
-   */
-  const getRegisteredOwners = (): OwnerProfile[] => {
-    try {
-      const data = localStorage.getItem(OWNER_REGISTRY_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const saveRegisteredOwners = (owners: OwnerProfile[]) => {
-    try {
-      localStorage.setItem(OWNER_REGISTRY_KEY, JSON.stringify(owners));
-    } catch {
-      // ignore
-    }
-  };
 
   /**
-   * Login with Mobile or Account ID + PIN
+   * Login with Mobile or Account ID + PIN (searches cloud registry over HTTP)
    */
-  const login = useCallback(async (mobileOrId: string, pin: string): Promise<{ success: boolean; error?: string }> => {
-    const cleanInput = mobileOrId.trim().toLowerCase();
-    const cleanPin = pin.trim();
+  const login = useCallback(
+    async (mobileOrId: string, pin: string): Promise<{ success: boolean; error?: string }> => {
+      const cleanInput = mobileOrId.trim();
+      const cleanPin = pin.trim();
 
-    if (!cleanInput) {
-      return { success: false, error: 'Please enter Mobile Number or Account ID.' };
-    }
-    if (!cleanPin) {
-      return { success: false, error: 'Please enter your Secret PIN.' };
-    }
-
-    const registered = getRegisteredOwners();
-    let found = registered.find(
-      (o) =>
-        (o.mobile.replace(/\D/g, '') === cleanInput.replace(/\D/g, '') ||
-          o.id.toLowerCase() === cleanInput ||
-          (o.email && o.email.toLowerCase() === cleanInput)) &&
-        o.pin === cleanPin
-    );
-
-    // If first time logging in with a new device or direct access
-    if (!found) {
-      // Check if this is the active owner
-      const currentActive = cloudSync.getOwnerProfile();
-      if (
-        currentActive &&
-        (currentActive.mobile.replace(/\D/g, '') === cleanInput.replace(/\D/g, '') ||
-          currentActive.id.toLowerCase() === cleanInput) &&
-        currentActive.pin === cleanPin
-      ) {
-        found = currentActive;
+      if (!cleanInput) {
+        return { success: false, error: 'Please enter Mobile Number or Account ID.' };
       }
-    }
+      if (!cleanPin) {
+        return { success: false, error: 'Please enter your Secret PIN.' };
+      }
 
-    if (!found) {
-      // If no account exists yet, let them auto-onboard or display clear error
-      if (registered.length === 0) {
-        // Auto-create default owner account for seamless instant first-run
-        const newOwner: OwnerProfile = {
-          id: `OWN-${cleanInput.replace(/\D/g, '').slice(-4) || '1001'}`,
-          businessName: 'My Daily Finance',
-          ownerName: 'Finance Owner',
-          mobile: cleanInput.replace(/\D/g, '') || '9876543210',
-          pin: cleanPin,
-          createdAt: new Date().toISOString(),
-          lastLoginAt: new Date().toISOString(),
-          activeDeviceId: cloudSync.getDeviceId(),
-        };
-        saveRegisteredOwners([newOwner]);
-        cloudSync.saveOwnerProfile(newOwner);
-        setOwner(newOwner);
+      // 1. Try Live Cloud Registry Lookup
+      const cloudRes = await cloudSync.lookupAndAuthOwner(cleanInput, cleanPin);
+      if (cloudRes.success && cloudRes.owner) {
+        setOwner(cloudRes.owner);
         return { success: true };
       }
 
       return {
         success: false,
-        error: 'Invalid Mobile Number / Account ID or incorrect PIN.',
+        error: cloudRes.error || 'Invalid Mobile Number / Account ID or incorrect PIN.',
       };
-    }
-
-    // Update last login
-    const updated: OwnerProfile = {
-      ...found,
-      lastLoginAt: new Date().toISOString(),
-      activeDeviceId: cloudSync.getDeviceId(),
-    };
-
-    cloudSync.saveOwnerProfile(updated);
-    setOwner(updated);
-
-    // Update registry
-    const newRegistry = registered.map((r) => (r.id === updated.id ? updated : r));
-    saveRegisteredOwners(newRegistry);
-
-    return { success: true };
-  }, []);
+    },
+    []
+  );
 
   /**
-   * Register a new Owner Account
+   * Register a new Owner Account in Cloud Database
    */
   const register = useCallback(
     async (data: {
@@ -167,34 +96,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: 'PIN must be at least 4 digits.' };
       }
 
-      const registered = getRegisteredOwners();
-      const existing = registered.find((o) => o.mobile.replace(/\D/g, '') === cleanMobile);
-
-      if (existing) {
-        return {
-          success: false,
-          error: 'An account with this mobile number already exists. Please log in.',
-        };
+      const res = await cloudSync.registerOwnerInCloud(data);
+      if (res.success && res.owner) {
+        setOwner(res.owner);
+        return { success: true };
       }
 
-      const newOwner: OwnerProfile = {
-        id: `OWN-${cleanMobile.slice(-4)}-${Math.floor(Math.random() * 900 + 100)}`,
-        ownerName: data.ownerName.trim(),
-        businessName: data.businessName.trim(),
-        mobile: cleanMobile,
-        pin: cleanPin,
-        email: data.email?.trim(),
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        activeDeviceId: cloudSync.getDeviceId(),
+      return {
+        success: false,
+        error: res.error || 'Failed to create cloud account.',
       };
-
-      const newRegistry = [...registered, newOwner];
-      saveRegisteredOwners(newRegistry);
-      cloudSync.saveOwnerProfile(newOwner);
-      setOwner(newOwner);
-
-      return { success: true };
     },
     []
   );
@@ -210,13 +121,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updated = { ...owner, ...updates, updatedAt: new Date().toISOString() };
       cloudSync.saveOwnerProfile(updated);
       setOwner(updated);
-
-      const registered = getRegisteredOwners();
-      const newRegistry = registered.map((r) => (r.id === updated.id ? updated : r));
-      saveRegisteredOwners(newRegistry);
     },
     [owner]
   );
+
 
   return (
     <AuthContext.Provider
