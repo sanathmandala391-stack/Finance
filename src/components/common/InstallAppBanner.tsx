@@ -63,12 +63,20 @@ export const InstallAppBanner: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0">
+        <a
+          href="/Sri_Lakshmi_Narasimha_Finance.apk"
+          download="Sri_Lakshmi_Narasimha_Finance.apk"
+          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 text-dark-950 font-black text-xs shadow-md active:scale-95 transition-all flex items-center gap-1 hover:brightness-110"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>APK</span>
+        </a>
+
         <button
           type="button"
           onClick={handleInstallClick}
           className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-dark-950 font-black text-xs shadow-md active:scale-95 transition-all flex items-center gap-1"
         >
-          <Download className="w-3.5 h-3.5" />
           <span>Install</span>
         </button>
 

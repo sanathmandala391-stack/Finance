@@ -243,7 +243,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* 2. LANGUAGE PREFERENCE */}
+      {/* 2. ANDROID APK DOWNLOAD CARD */}
+      <div className="rounded-3xl bg-gradient-to-r from-emerald-950/60 via-dark-900 to-dark-850 border border-emerald-500/40 p-5 sm:p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-green-400 text-dark-950 font-black flex items-center justify-center text-xl shadow-glow-emerald shrink-0">
+              <Smartphone className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <span>Android App (.APK)</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">
+                  v1.0.0 Ready
+                </span>
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Install directly on any Android Phone for fast 1-tap offline & online access.
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="/Sri_Lakshmi_Narasimha_Finance.apk"
+            download="Sri_Lakshmi_Narasimha_Finance.apk"
+            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-500 text-dark-950 font-black text-sm shadow-glow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0"
+          >
+            <Download className="w-5 h-5 stroke-[2.5]" />
+            <span>Download APK (4.5 MB)</span>
+          </a>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-dark-950/60 border border-emerald-500/20 text-xs text-slate-300 space-y-1.5">
+          <div className="font-bold text-emerald-300 flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span>How to install on your Android Mobile:</span>
+          </div>
+          <ol className="list-decimal list-inside text-[12px] text-slate-400 space-y-1 pl-1">
+            <li>Tap <strong>Download APK</strong> button above.</li>
+            <li>Once downloaded, open the file from your Notifications or Downloads folder.</li>
+            <li>Tap <strong>Install</strong> (Allow <em>"Install from Unknown Sources"</em> if prompted).</li>
+            <li>Open the App and log in with mobile <strong>8466985944</strong> and PIN <strong>1234</strong>!</li>
+          </ol>
+        </div>
+      </div>
+
+      {/* 3. LANGUAGE PREFERENCE */}
       <div className="rounded-3xl bg-dark-900 border border-gold-500/20 p-5 sm:p-6 shadow-xl space-y-3">
         <div className="flex items-center gap-2 text-gold-400 font-extrabold text-sm">
           <Globe className="w-4 h-4" />
