@@ -1,8 +1,8 @@
 import { Customer, PaymentRecord, OwnerProfile, CloudSyncStatus } from '../types/finance';
 
 const LOCAL_STORAGE_FIREBASE_URL_KEY = 'giri_giri_firebase_db_url_v2';
-// Default Firebase Realtime DB URL
-const DEFAULT_FIREBASE_URL = 'https://girigiri-finance-default-rtdb.firebaseio.com';
+// Default Firebase Realtime DB URL configured by user
+const DEFAULT_FIREBASE_URL = 'https://giri-giri-default-rtdb.firebaseio.com';
 
 export interface FirebaseDataPayload {
   owner: OwnerProfile;
@@ -35,7 +35,11 @@ export class FirebaseSyncService {
 
   public getStoredDatabaseUrl(): string {
     try {
-      return localStorage.getItem(LOCAL_STORAGE_FIREBASE_URL_KEY) || DEFAULT_FIREBASE_URL;
+      const stored = localStorage.getItem(LOCAL_STORAGE_FIREBASE_URL_KEY);
+      if (!stored || stored.includes('girigiri-finance-default-rtdb')) {
+        return DEFAULT_FIREBASE_URL;
+      }
+      return stored;
     } catch {
       return DEFAULT_FIREBASE_URL;
     }
