@@ -4,7 +4,7 @@ import { Modal } from '../common/Modal';
 import { formatINR } from '../../utils/currency';
 import { formatDisplayDate, getTodayISO, isBeforeDay } from '../../utils/dateUtils';
 import { useLanguage } from '../../hooks/useLanguage';
-import { CheckCircle2, History, IndianRupee, ShieldAlert, Sparkles, Plus, Wallet, Smartphone, Building2 } from 'lucide-react';
+import { CheckCircle2, History, IndianRupee, ShieldAlert, Sparkles, Plus, Wallet, Smartphone, Building2, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
 
@@ -22,6 +22,7 @@ interface PayDueModalProps {
     paymentMethod: PaymentMethod;
     notes?: string;
   }) => void;
+  onDeletePayment?: (paymentId: string) => void;
   todayDate?: string;
 }
 
@@ -31,6 +32,7 @@ export const PayDueModal: React.FC<PayDueModalProps> = ({
   customer,
   dayItem,
   onConfirmPayment,
+  onDeletePayment,
   todayDate = getTodayISO(),
 }) => {
   const { t } = useLanguage();
@@ -89,26 +91,95 @@ export const PayDueModal: React.FC<PayDueModalProps> = ({
     onClose();
   };
 
+  const handleDeleteExistingPayment = (paymentId: string, receiptNumber: string, paidAmt: number) => {
+    if (
+      window.confirm(
+        `Are you sure you want to revert/delete payment ${receiptNumber} (${formatINR(
+          paidAmt
+        )}) for Day ${dayItem.dayNumber} (${formatDisplayDate(dayItem.date)})?\n\nThis will restore this installment to its original unpaid/due status.`
+      )
+    ) {
+      onDeletePayment?.(paymentId);
+      onClose();
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={dayItem.isPast ? `${t('settleOverdueDay')} (${t('day')} ${dayItem.dayNumber})` : `${t('confirmPayment')} ${t('day')} ${dayItem.dayNumber}`}
+      title={
+        dayItem.paidAmount >= dayItem.targetAmount
+          ? `Day ${dayItem.dayNumber} Payment Details (${formatDisplayDate(dayItem.date)})`
+          : dayItem.isPast
+          ? `${t('settleOverdueDay')} (${t('day')} ${dayItem.dayNumber})`
+          : `${t('confirmPayment')} ${t('day')} ${dayItem.dayNumber}`
+      }
       subtitle={`Customer: ${customer.name} | ${t('scheduledDate')}: ${formatDisplayDate(dayItem.date)}`}
       maxWidth="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Day Status Notice */}
-        {dayItem.isPast && isLate && (
-          <div className="p-3.5 bg-sky-950/70 border border-sky-500/40 rounded-2xl flex items-start gap-2.5 text-xs text-sky-200">
-            <History className="w-4 h-4 shrink-0 text-sky-400 mt-0.5" />
-            <div>
-              <span className="font-bold">{t('dueCleared')}:</span> This payment was due on{' '}
-              <strong className="underline text-white font-bold">{formatDisplayDate(dayItem.date)}</strong>. Recording
-              it today will mark this schedule day as <span className="font-black text-sky-300">🔵 {t('paidLate')}</span>.
+      <div className="space-y-4">
+        {/* Existing Payment Card (If Day Has Payments Recorded) */}
+        {dayItem.payments && dayItem.payments.length > 0 && (
+          <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5 uppercase tracking-wide">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Recorded Payment for Day {dayItem.dayNumber}</span>
+              </span>
+              <span className="text-xs font-mono font-black text-emerald-400">
+                {formatINR(dayItem.paidAmount)} Paid
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {dayItem.payments.map((p) => (
+                <div
+                  key={p.id}
+                  className="p-3 rounded-xl bg-dark-900/90 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                >
+                  <div className="text-xs space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-black text-gold-400">{p.receiptNumber}</span>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-white font-medium">Paid on {formatDisplayDate(p.paymentDate)}</span>
+                      <span className="text-slate-400">•</span>
+                      <span className="px-1.5 py-0.2 rounded bg-dark-800 text-slate-300 text-[10px] font-bold">
+                        {p.paymentMethod}
+                      </span>
+                    </div>
+                    {p.notes && <p className="text-slate-400 italic text-[11px]">{p.notes}</p>}
+                  </div>
+
+                  {onDeletePayment && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExistingPayment(p.id, p.receiptNumber, p.amount)}
+                      className="px-2.5 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center gap-1.5 transition-all self-end sm:self-auto active:scale-95"
+                      title="Undo/Delete this payment"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Undo / Delete Payment</span>
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Day Status Notice */}
+          {dayItem.isPast && isLate && (
+            <div className="p-3.5 bg-sky-950/70 border border-sky-500/40 rounded-2xl flex items-start gap-2.5 text-xs text-sky-200">
+              <History className="w-4 h-4 shrink-0 text-sky-400 mt-0.5" />
+              <div>
+                <span className="font-bold">{t('dueCleared')}:</span> This payment was due on{' '}
+                <strong className="underline text-white font-bold">{formatDisplayDate(dayItem.date)}</strong>. Recording
+                it today will mark this schedule day as <span className="font-black text-sky-300">🔵 {t('paidLate')}</span>.
+              </div>
+            </div>
+          )}
 
         {/* Collection Amount Card */}
         <div className="rounded-2xl bg-dark-850 border border-gold-500/30 p-3.5 sm:p-4 space-y-3">
@@ -287,6 +358,8 @@ export const PayDueModal: React.FC<PayDueModalProps> = ({
           </button>
         </div>
       </form>
+      </div>
     </Modal>
   );
 };
+

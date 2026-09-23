@@ -29,6 +29,7 @@ interface CustomerDetailViewProps {
   onEditCustomer: (customer: Customer) => void;
   onDeleteCustomer: (id: string) => void;
   onRecordPayment: (params: any) => void;
+  onDeletePayment: (paymentId: string) => void;
   todayDate?: string;
 }
 
@@ -39,6 +40,7 @@ export const CustomerDetailView: React.FC<CustomerDetailViewProps> = ({
   onEditCustomer,
   onDeleteCustomer,
   onRecordPayment,
+  onDeletePayment,
   todayDate = getTodayISO(),
 }) => {
   const { t } = useLanguage();
@@ -378,13 +380,35 @@ export const CustomerDetailView: React.FC<CustomerDetailViewProps> = ({
                         {payment.notes || '-'}
                       </td>
                       <td className="p-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPaymentForReceipt(payment)}
-                          className="px-3 py-1 rounded-lg bg-dark-800 hover:bg-dark-750 border border-gold-500/20 text-gold-400 font-bold text-xs transition-all"
-                        >
-                          View Slip
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPaymentForReceipt(payment)}
+                            className="px-2.5 py-1 rounded-lg bg-dark-800 hover:bg-dark-750 border border-gold-500/20 text-gold-400 font-bold text-xs transition-all"
+                          >
+                            View Slip
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Are you sure you want to delete payment ${payment.receiptNumber} (${formatINR(
+                                    payment.amount
+                                  )}) recorded on ${formatDisplayDate(payment.paymentDate)} for Day ${
+                                    payment.dayNumber
+                                  }? This will revert this installment.`
+                                )
+                              ) {
+                                onDeletePayment(payment.id);
+                              }
+                            }}
+                            className="p-1 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/30 text-rose-400 font-bold transition-all"
+                            title="Delete / Revert Payment"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -403,6 +427,7 @@ export const CustomerDetailView: React.FC<CustomerDetailViewProps> = ({
           customer={customer}
           dayItem={selectedDay}
           onConfirmPayment={onRecordPayment}
+          onDeletePayment={onDeletePayment}
           todayDate={todayDate}
         />
       )}

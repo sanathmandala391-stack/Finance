@@ -118,6 +118,7 @@ export const App: React.FC = () => {
             onEditCustomer={handleEditCustomer}
             onDeleteCustomer={deleteCustomer}
             onRecordPayment={recordPayment}
+            onDeletePayment={deletePayment}
             todayDate={todayDate}
           />
         ) : (
